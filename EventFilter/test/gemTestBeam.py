@@ -2,6 +2,16 @@ import FWCore.ParameterSet.Config as cms
 import FWCore.ParameterSet.VarParsing as VarParsing
 
 options = VarParsing.VarParsing('analysis')
+options.register('include20x10',
+                 False,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.bool,
+                 "Include 20x10 chamber in the geometry")
+options.register('excludeChambers',
+                 [],
+                 VarParsing.VarParsing.multiplicity.list,
+                 VarParsing.VarParsing.varType.int,
+                 "Exclude the chamber from track reconstruction (0 to 3)")
 options.parseArguments()
 
 process = cms.Process("GEMStreamSource")
@@ -43,16 +53,42 @@ process.load('EventFilter.GEMRawToDigi.muonGEMDigis_cfi')
 process.muonGEMDigis.InputLabel = cms.InputTag("rawDataCollector")
 process.muonGEMDigis.fedIdStart = cms.uint32(1477)
 process.muonGEMDigis.fedIdEnd = cms.uint32(1478)
-process.muonGEMDigis.skipBadStatus = cms.bool(False)
+process.muonGEMDigis.skipBadStatus = cms.bool(True)
 process.muonGEMDigis.useDBEMap = True
 
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag.toGet = cms.VPSet(cms.PSet(record=cms.string("GEMeMapRcd"),
-                                             tag=cms.string("GEMeMapTestBeam"),
-                                             connect=cms.string("sqlite_fip:gemsw/EventFilter/data/GEMeMap_TestBeam_ME0.db")))
-
 process.load('gemsw.Geometry.GeometryTestBeam_cff')
+process.gemGeometry.applyAlignment = cms.bool(True)
+
+if options.include20x10 :
+    process.GlobalTag.toGet = cms.VPSet(cms.PSet(record=cms.string("GEMeMapRcd"),
+                                                 tag=cms.string("GEMeMapTestBeam"),
+                                                 connect=cms.string("sqlite_fip:gemsw/EventFilter/data/GEMeMap_TestBeam_with_20x10.db")),
+                                        cms.PSet(
+                                            record = cms.string('GEMAlignmentRcd'),
+                                            tag = cms.string("TBGEMAlignment_test"),
+                                            connect = cms.string("sqlite_fip:gemsw/Alignment/data/Alignment_Standalone_2021.db")),
+                                        cms.PSet(
+                                            record = cms.string('GEMAlignmentErrorExtendedRcd'),
+                                            tag = cms.string("TBGEMAlignmentErrorExtended_test"),
+                                            connect = cms.string("sqlite_fip:gemsw/Alignment/data/Alignment_Standalone_2021.db")),
+                                        cms.PSet(record=cms.string('GlobalPositionRcd'), tag = cms.string('IdealGeometry'))
+   )
+else :
+    process.GlobalTag.toGet = cms.VPSet(cms.PSet(record=cms.string("GEMeMapRcd"),
+                                                 tag=cms.string("GEMeMapTestBeam"),
+                                                 connect=cms.string("sqlite_fip:gemsw/EventFilter/data/GEMeMap_TestBeam.db")),
+                                        cms.PSet(
+                                            record = cms.string('GEMAlignmentRcd'),
+                                            tag = cms.string("TBGEMAlignment_test"),
+                                            connect = cms.string("sqlite_fip:gemsw/Alignment/data/Alignment_Standalone_2021.db")),
+                                        cms.PSet(
+                                            record = cms.string('GEMAlignmentErrorExtendedRcd'),
+                                            tag = cms.string("TBGEMAlignmentErrorExtended_test"),
+                                            connect = cms.string("sqlite_fip:gemsw/Alignment/data/Alignment_Standalone_2021.db")),
+                                        cms.PSet(record=cms.string('GlobalPositionRcd'), tag = cms.string('IdealGeometry'))
+    )
 process.load('MagneticField.Engine.uniformMagneticField_cfi')
 process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('RecoMuon.TrackingTools.MuonServiceProxy_cff')
@@ -63,11 +99,12 @@ process.SteppingHelixPropagatorAny.useMagVolumes = cms.bool(False)
 process.GEMTrackFinder = cms.EDProducer("GEMTrackFinder",
                                         process.MuonServiceProxy,
                                         gemRecHitLabel = cms.InputTag("gemRecHits"),
-                                        maxClusterSize = cms.double(10),
-                                        minClusterSize = cms.double(1),
+                                        maxClusterSize = cms.int32(10),
+                                        minClusterSize = cms.int32(1),
                                         trackChi2 = cms.double(1000.0),
                                         skipLargeChamber = cms.bool(True),
-                                        excludingChambers = cms.vint32(1),
+                                        use1DSeeds = cms.bool(False), 
+                                        excludingChambers = cms.vint32(options.excludeChambers),
                                         MuonSmootherParameters = cms.PSet(
                                            PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
                                            PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
@@ -80,9 +117,14 @@ process.GEMTrackFinder.ServiceParameters.RPCLayers = cms.bool(False)
 
 process.load("CommonTools.UtilAlgos.TFileService_cfi")
 process.TestBeamTrackAnalyzer = cms.EDAnalyzer("TestBeamTrackAnalyzer",
+                                               process.MuonServiceProxy,
                                                gemRecHitLabel = cms.InputTag("gemRecHits"),
-                                               tracks = cms.InputTag("GEMTrackFinder"),
+                                               tracks = cms.InputTag("GEMTrackFinder", "", "GEMStreamSource"),
+                                               seeds = cms.InputTag("GEMTrackFinder", "", "GEMStreamSource"),
                                                )
+process.TestBeamTrackAnalyzer.ServiceParameters.GEMLayers = cms.untracked.bool(True)
+process.TestBeamTrackAnalyzer.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+process.TestBeamTrackAnalyzer.ServiceParameters.RPCLayers = cms.bool(False)
 
 process.output = cms.OutputModule("PoolOutputModule",
                                   outputCommands=cms.untracked.vstring(
