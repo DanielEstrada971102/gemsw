@@ -17,13 +17,41 @@ process.load('Configuration.StandardSequences.RawToDigi_cff')
 process.load("Configuration.StandardSequences.Reconstruction_cff")
 # test beam detectors at y-axis - GE21 at (0,110*cm,0), GE0 at (0,120*cm,0)
 process.load('gemsw.Geometry.GeometryQC8GE21_cff')
+process.load('MagneticField.Engine.uniformMagneticField_cfi')
 
-#process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-#from Configuration.AlCa.GlobalTag import GlobalTag
-#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
+SuperChType = [\
+'0','0','0','0','0',\
+'S','0','S','0','0',\
+'0','0','0','0','0']
+
+print(SuperChType)
+
+SuperChSeedingLayers = []
+
+for i in range (0,30):
+    SuperChSeedingLayers.append(0)
+
+for j in range (0,3):
+    for i in range (5*j,5*(j+1)):
+        if (SuperChType[i]!='0'):
+            SuperChSeedingLayers[i*2]=1
+            SuperChSeedingLayers[i*2+1]=3
+            break
+    for i in range (5*(j+1)-1,5*j-1,-1):
+        if (SuperChType[i]!='0'):
+            SuperChSeedingLayers[i*2]=4
+            SuperChSeedingLayers[i*2+1]=2
+            break
+
+print(SuperChSeedingLayers)
+
+
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100),
+    input = cms.untracked.int32(1000), #Number events
 )
 process.source = cms.Source("EmptySource")
 process.configurationMetadata = cms.untracked.PSet(
@@ -42,7 +70,7 @@ process.FEVTDEBUGoutput = cms.OutputModule("PoolOutputModule",
     ),
     fileName = cms.untracked.string('file:step1.root'),
     outputCommands = cms.untracked.vstring( (
-        'drop *',
+        'keep *',
         'keep FEDRawDataCollection_rawDataCollector_*_*',
         'keep *_gemRecHits_*_*',
         'keep *_gemSegments_*_*',
@@ -97,7 +125,26 @@ process.mix = cms.EDProducer("MixingModule",
         ),
     ),
 )
-
+process.GEMCosmicMuonForQC8 = cms.EDProducer("GEMCosmicMuonForQC8",
+                                       process.MuonServiceProxy,
+                                       gemRecHitLabel = cms.InputTag("gemRecHits"),
+                                       maxClusterSize = cms.double(10),
+                                       minClusterSize = cms.double(1),
+                                       trackChi2 = cms.double(1000.0),
+                                       trackResX = cms.double(100),
+                                       trackResY = cms.double(100),
+                                       MulSigmaOnWindow = cms.double(7),
+                                       SuperChamberType = cms.vstring(SuperChType),
+                                       SuperChamberSeedingLayers = cms.vdouble(SuperChSeedingLayers),
+                                       MuonSmootherParameters = cms.PSet(
+                                           PropagatorAlong = cms.string('SteppingHelixPropagatorAny'),
+                                           PropagatorOpposite = cms.string('SteppingHelixPropagatorAny'),
+                                           RescalingFactor = cms.double(5.0)
+                                           ),
+                                       )
+process.GEMCosmicMuonForQC8.ServiceParameters.GEMLayers = cms.untracked.bool(True)
+process.GEMCosmicMuonForQC8.ServiceParameters.CSCLayers = cms.untracked.bool(False)
+process.GEMCosmicMuonForQC8.ServiceParameters.RPCLayers = cms.bool(False)
 process.gemPacker.useDBEMap = False
 
 process.rawDataCollector.RawCollectionList = cms.VInputTag(cms.InputTag("gemPacker"))
@@ -111,18 +158,11 @@ process.generation_step = cms.Path(process.generator+process.pgen)
 process.simulation_step = cms.Path(process.psim)
 process.digitisation_step = cms.Path(process.mix+process.simMuonGEMDigis)
 #process.digi2raw_step = cms.Path(process.gemPacker+process.rawDataCollector+process.muonGEMDigis+process.gemRecHits)
-process.digi2raw_step = cms.Path(process.gemRecHits)
+process.digi2raw_step = cms.Path(process.gemRecHits* process.GEMCosmicMuonForQC8)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.FEVTDEBUGoutput_step = cms.EndPath(process.FEVTDEBUGoutput)
 
 process.schedule = cms.Schedule(process.generation_step,process.simulation_step,
 process.digitisation_step,process.digi2raw_step,
 process.endjob_step,process.FEVTDEBUGoutput_step)
-
 process.RandomNumberGeneratorService.simMuonGEMDigis = process.RandomNumberGeneratorService.generator
-
-
-#process.MessageLogger.G4cout=dict()
-#process.MessageLogger.G4cerr=dict()
-#process.MessageLogger.SimG4CoreApplication=dict()
-#process.MessageLogger.SimG4CoreGeometry=dict()
