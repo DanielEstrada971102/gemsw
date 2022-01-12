@@ -133,7 +133,7 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
   // get the collection of GEMRecHit
   edm::Handle<GEMRecHitCollection> gemRecHits;
   ev.getByToken(theGEMRecHitToken,gemRecHits);
-
+  //cout << "gemRecHits starts" << endl;
   if (gemRecHits->size() <= 3)
   {
     ev.put(std::move(trajectorySeeds));
@@ -145,11 +145,11 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
     ev.put(std::move(trajectoryType));
     return;
   }
-  
+  //cout << "gemRecHits ends" << endl;
   int countTC = 0;
-    
   for (auto tch : gemChambers)
   {
+    //cout << "start loop" << endl;
     countTC++;
     MuonTransientTrackingRecHit::MuonRecHitContainer muRecHits;
     MuonTransientTrackingRecHit::MuonRecHitContainer seedupRecHits;
@@ -159,6 +159,7 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
     int nDnType = 1;
     
     int nIdxTestCh = tch.id().chamber() + tch.id().layer() - 2; // (tch.id.chamber - 1) + (tch.id.layer - 1) -> array numbering starts from 0 and not 1
+    //cout << "check NidxtestCh" << g_vecChamType << endl;
     
     if ( g_vecChamType[ nIdxTestCh ] == 2 ) {nUpType = 4;}
     if ( g_vecChamType[ nIdxTestCh ] == 1 ) {nDnType = 3;}
@@ -166,25 +167,30 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
     int TCN = 0; //number of hitted chamber without tch
     for (auto ch : gemChambers)
     {
+      //cout << "start loop2" << endl;
       if (tch == ch) continue;
+      //cout << "check loop2"<< endl;
       int nHitOnceFilter = 0;
       for (auto etaPart : ch.etaPartitions())
       {
+        //cout << "start loop3" << endl;
         GEMDetId etaPartID = etaPart->id();
         GEMRecHitCollection::range range = gemRecHits->get(etaPartID);   
-
+        //cout << "check loop3"<< endl;
         for (GEMRecHitCollection::const_iterator rechit = range.first; rechit!=range.second; ++rechit)
         {
+          //cout << "start loop4" << endl;
           const GeomDet* geomDet(etaPart);
           if ((*rechit).clusterSize()<minCLS) continue;
           if ((*rechit).clusterSize()>maxCLS) continue;
+          //cout << "check loop4"<< endl;
           muRecHits.push_back(MuonTransientTrackingRecHit::specificBuild(geomDet,&*rechit));
           
           if ( nHitOnceFilter == 0 ) {
             TCN++;
             nHitOnceFilter = 1;
           }
-          
+          //cout << "check nHitOnceFilter" << endl;
           int nIdxCh  = ch.id().chamber() + ch.id().layer() - 2;
 
           if ( g_vecChamType[ nIdxCh ] == nUpType ) {
@@ -195,24 +201,36 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
         }
       }
     }
+
+    for(int i=0; i<= 100; i=i+1){
+      cout << "check g_vecChamType" << g_vecChamType[i] << endl;
+      
+    }
+    cout << "--------------------" << endl;
     if (muRecHits.size()<3) continue;
     if (TCN < 3) continue;
-
+    //cout << "muRechits"<< muRecHits.size() << endl;
+    //cout << "TCN"<< TCN << endl;
+    //cout << "start loop5" << endl;
     vector<TrajectorySeed> trajSeedsBody;
     std::vector<TrajectorySeed> *trajSeeds = &trajSeedsBody;
     std::vector<uint32_t> vecunInfoSeeds;
     findSeeds(trajSeeds, seedupRecHits, seeddnRecHits, vecunInfoSeeds);
     Trajectory bestTrajectory;
     TrajectorySeed bestSeed;
-
+    
+    
     float maxChi2 = 10000000.0;
     int countTR = 0;
     int nIdxBest = -1;
-
+   
     for (auto seed : *trajSeeds)
     {
+    
+    //cout << "check loop5"<< endl;  
       Trajectory smoothed = makeTrajectory(seed, muRecHits, gemChambers,tch);
       
+      //cout << seed->startingState()  << endl; 
       countTR += 1;
       
       if (smoothed.isValid())
@@ -225,13 +243,17 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
           bestTrajectory = smoothed;
           bestSeed = seed;
           nIdxBest = countTR - 1;
+          
         }
       }
     }
-
+    //cout << "start " << endl;
     if (!bestTrajectory.isValid()) continue;
     if (maxChi2 > trackChi2) continue;
+    //cout << "finish " << endl;
+
     
+ 
     const FreeTrajectoryState* ftsAtVtx = bestTrajectory.geometricalInnermostState().freeState();
     
     GlobalPoint pca = ftsAtVtx->position();
@@ -325,7 +347,8 @@ int GEMCosmicMuonForQC8::findSeeds(std::vector<TrajectorySeed> *tmptrajectorySee
         GEMDetId detId1(hit1->rawId()), detId2(hit2->rawId());
         uint32_t unChNo1 = detId1.chamber()+detId1.layer()-1;
         uint32_t unChNo2 = detId2.chamber()+detId2.layer()-1;
-        
+        cout << "chamber1" << detId1 << endl;
+        cout << "chamber2" << detId2 << endl;
         uint32_t unRoll1 = detId1.roll(), unRoll2 = detId2.roll();
         
         uint32_t unCol1 = ( unChNo1 - 1 ) / 10, unCol2 = ( unChNo2 - 1 ) / 10;
@@ -352,13 +375,14 @@ int GEMCosmicMuonForQC8::findSeeds(std::vector<TrajectorySeed> *tmptrajectorySee
 
 Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransientTrackingRecHit::MuonRecHitContainer &muRecHits, std::vector<GEMChamber> gemChambers, GEMChamber testChamber)
 {
+  
   PTrajectoryStateOnDet ptsd1(seed.startingState());
   DetId did(ptsd1.detId());
   const BoundPlane& bp = theService->trackingGeometry()->idToDet(did)->surface();
   TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(ptsd1,&bp,&*theService->magneticField());
   TrajectoryStateOnSurface tsosCurrent = tsos;
   TransientTrackingRecHit::ConstRecHitContainer consRecHits;
-
+  cout << "finish " << endl;
   // range was changed by RecHitRange
   TrajectorySeed::RecHitRange range = seed.recHits();
   int nseed = 0;
@@ -376,6 +400,7 @@ Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransien
     tsosCurrent = theService->propagator("SteppingHelixPropagatorAny")->propagate(tsosCurrent, theService->trackingGeometry()->idToDet(ch.id())->surface());
     if (!tsosCurrent.isValid()) return Trajectory();
     GlobalPoint tsosGP = tsosCurrent.freeTrajectoryState()->position();
+    cout << "tsos gp   "<< tsosGP <<endl;
 
     float maxR = 9999;
     int nhit=-1;

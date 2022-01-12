@@ -7,7 +7,7 @@
 import datetime
 print(datetime.datetime.now())
 import FWCore.ParameterSet.Config as cms
-import configureRun_cfi as runConfig
+#import configureRun_cfi as runConfig
 
 import os
 
@@ -34,8 +34,8 @@ options.register("idxJob","1", # era -1
 options.parseArguments()
 
 # The superchambers in the 15 slots
-SuperChType = runConfig.StandConfiguration
-#SuperChType = ['0', '0', '0', '0', '0', '0', '0']
+#SuperChType = runConfig.StandConfiguration
+SuperChType = ['0', '0', '0', '0', '0', '0', '0']
 
 print(SuperChType)
 
@@ -87,25 +87,14 @@ process.load('EventFilter.GEMRawToDigi.muonGEMDigis_cfi')
 process.load('SimMuon.GEMDigitizer.muonGEMDigi_cff')
 process.load('RecoLocalMuon.GEMRecHit.gemLocalReco_cff')
 
-# DEFINITION OF THE SUPERCHAMBERS INSIDE THE STAND
-for i in range(len(SuperChType)):
-    column_row = '_c%d_r%d' % (1, i%7+1)
-    if SuperChType[i]=='L' : size = 'L'
-    if SuperChType[i]=='S' : size = 'S'
-    if SuperChType[i]!='0' :
-        geomFile = 'gemsw/Analysis/data/gem21'+size+column_row+'.xml'
-        #process.XMLIdealGeometryESSource.geomXMLFiles.append(geomFile)
-        print(geomFile)
-    # if SuperChType[i]!='0' :
-    # 	process.XMLIdealGeometryESSource.geomXMLFiles.append(geomFile)
-    # 	print('-> Appended')
+
 
 # Config importation & settings
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(options.eventsPerJob))
 nIdxJob = int(options.idxJob)
 # manuel lo arregla...
-strOutput = "out_reco_MC.root" if nIdxJob >= 0 else runConfig.OutputFileName 
-#strOutput = "out_reco_MC.root" if nIdxJob >= 0 else os.path.abspath("launcher_sim.py").split('gemcrs')[0] + 'gemcrs/src/Validation/GEMCosmicMuonStand/test/' + "configureRun_cfi.py"
+#strOutput = "out_reco_MC.root" if nIdxJob >= 0 else runConfig.OutputFileName 
+strOutput = "out_reco_MC.root" if nIdxJob >= 0 else os.path.abspath("launcher_sim.py").split('gemcrs')[0] + 'gemcrs/src/Validation/GEMCosmicMuonStand/test/' + "configureRun_cfi.py"
 if nIdxJob < 0: nIdxJob = 0
 
 # Input source
@@ -201,12 +190,12 @@ process.MuonServiceProxy.ServiceParameters.Propagators.append('StraightLinePropa
 process.GEMCosmicMuonForQC8 = cms.EDProducer("GEMCosmicMuonForQC8",
                                        process.MuonServiceProxy,
                                        gemRecHitLabel = cms.InputTag("gemRecHits"),
-                                       maxClusterSize = cms.double(runConfig.maxClusterSize),
-                                       minClusterSize = cms.double(runConfig.minClusterSize),
-                                       trackChi2 = cms.double(runConfig.trackChi2),
-                                       trackResX = cms.double(runConfig.trackResX),
-                                       trackResY = cms.double(runConfig.trackResY),
-                                       MulSigmaOnWindow = cms.double(runConfig.MulSigmaOnWindow),
+                                       maxClusterSize = cms.double(10),
+                                       minClusterSize = cms.double(1),
+                                       trackChi2 = cms.double(1000.0),
+                                       trackResX = cms.double(100),
+                                       trackResY = cms.double(100),
+                                       MulSigmaOnWindow = cms.double(7),
                                        SuperChamberType = cms.vstring(SuperChType),
                                        SuperChamberSeedingLayers = cms.vdouble(SuperChSeedingLayers),
                                        MuonSmootherParameters = cms.PSet(
