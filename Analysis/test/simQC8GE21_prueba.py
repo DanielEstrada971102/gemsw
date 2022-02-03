@@ -70,7 +70,6 @@ process.FEVTDEBUGoutput = cms.OutputModule("PoolOutputModule",
     ),
     fileName = cms.untracked.string('file:sim_QC8GE21_prueba.root'),
     outputCommands = cms.untracked.vstring( (
-        'drop *',
         'keep *',
         'keep FEDRawDataCollection_rawDataCollector_*_*',
         'keep *_gemRecHits_*_*',

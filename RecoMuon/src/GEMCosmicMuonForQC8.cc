@@ -387,11 +387,13 @@ Trajectory GEMCosmicMuonForQC8::makeTrajectory(TrajectorySeed seed, MuonTransien
   // range was changed by RecHitRange
   TrajectorySeed::RecHitRange range = seed.recHits();
   int nseed = 0;
+  cout << "nseed\n" << nseed << endl;
   GlobalPoint seedGP[2];
   for (edm::OwnVector<TrackingRecHit>::const_iterator rechit = range.begin(); rechit!=range.end(); ++rechit){
     GEMDetId hitID(rechit->rawId());
     seedGP[nseed] = gemGeom->idToDet((*rechit).rawId())->surface().toGlobal(rechit->localPosition());
     nseed++;
+    cout << "nseed\n" << nseed << endl;
   }
   std::map<double,int> rAndhit;
 
