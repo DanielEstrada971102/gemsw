@@ -158,7 +158,7 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
     int nUpType = 2;
     int nDnType = 1;
     
-    int nIdxTestCh = tch.id().chamber() + tch.id().layer() - 2; // (tch.id.chamber - 1) + (tch.id.layer - 1) -> array numbering starts from 0 and not 1
+    int nIdxTestCh = tch.id().chamber() - countTC;//tch.id().chamber() + tch.id().layer() - 2; // (tch.id.chamber - 1) + (tch.id.layer - 1) -> array numbering starts from 0 and not 1
     //cout << "check NidxtestCh" << g_vecChamType << endl;
     
     if ( g_vecChamType[ nIdxTestCh ] == 2 ) {nUpType = 4;}
@@ -202,11 +202,6 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
       }
     }
 
-    for(int i=0; i<= 100; i=i+1){
-      cout << "check g_vecChamType" << g_vecChamType[i] << endl;
-      
-    }
-    cout << "--------------------" << endl;
     if (muRecHits.size()<3) continue;
     if (TCN < 3) continue;
     //cout << "muRechits"<< muRecHits.size() << endl;
