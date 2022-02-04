@@ -202,14 +202,6 @@ void GEMCosmicMuonForQC8::produce(edm::Event& ev, const edm::EventSetup& setup)
       }
     }
 
-<<<<<<< HEAD
-    // for(int i=0; i<= 100; i=i+1){
-    //   cout << "check g_vecChamType" << g_vecChamType[i] << endl;
-      
-    // }
-    // cout << "--------------------" << endl;
-=======
->>>>>>> NuevaBranch
     if (muRecHits.size()<3) continue;
     if (TCN < 3) continue;
     //cout << "muRechits"<< muRecHits.size() << endl;
