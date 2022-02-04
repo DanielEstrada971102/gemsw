@@ -19,30 +19,27 @@ process.load("Configuration.StandardSequences.Reconstruction_cff")
 process.load('gemsw.Geometry.GeometryQC8GE21_cff')
 process.load('MagneticField.Engine.uniformMagneticField_cfi')
 
-SuperChType = [\
-'0','0','0','0','0',\
-'S','0','S','0','0',\
-'0','0','0','0','0']
-
+SuperChType = ['S','0','0','0','0','0','S']
 print(SuperChType)
 
-SuperChSeedingLayers = []
+# SuperChSeedingLayers = []
 
-for i in range (0,30):
-    SuperChSeedingLayers.append(0)
+# for i in range (0,30):
+#     SuperChSeedingLayers.append(0)
 
-for j in range (0,3):
-    for i in range (5*j,5*(j+1)):
-        if (SuperChType[i]!='0'):
-            SuperChSeedingLayers[i*2]=1
-            SuperChSeedingLayers[i*2+1]=3
-            break
-    for i in range (5*(j+1)-1,5*j-1,-1):
-        if (SuperChType[i]!='0'):
-            SuperChSeedingLayers[i*2]=4
-            SuperChSeedingLayers[i*2+1]=2
-            break
+# for j in range (0,3):
+#     for i in range (5*j,5*(j+1)):
+#         if (SuperChType[i]!='0'):
+#             SuperChSeedingLayers[i*2]=1
+#             SuperChSeedingLayers[i*2+1]=3
+#             break
+#     for i in range (5*(j+1)-1,5*j-1,-1):
+#         if (SuperChType[i]!='0'):
+#             SuperChSeedingLayers[i*2]=4
+#             SuperChSeedingLayers[i*2+1]=2
+#             break
 
+SuperChSeedingLayers = [1,3,0,0,0,4,2]
 print(SuperChSeedingLayers)
 
 
